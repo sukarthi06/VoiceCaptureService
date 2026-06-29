@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="VoiceCaptureService.Api/VoiceCaptureService.Api.csproj" Id="c98a7fff-1961-4347-8a16-46d86c9aa2ba" />
+  <Project Path="VoiceCaptureService.Application/VoiceCaptureService.Application.csproj" Id="8a933ec0-17fc-4c71-8d5c-cf10185fa32d" />
+  <Project Path="VoiceCaptureService.Contracts/VoiceCaptureService.Contracts.csproj" Id="297d12bc-1f6a-4ed8-9484-79a5462e5bf9" />
+  <Project Path="VoiceCaptureService.Domain/VoiceCaptureService.Domain.csproj" Id="4c8de4ff-4a04-4449-a7bb-03a5b85c8c18" />
+  <Project Path="VoiceCaptureService.Infrastructure/VoiceCaptureService.Infrastructure.csproj" Id="1aa42adf-02da-48e4-be41-a431c34c977d" />
+</Solution>
