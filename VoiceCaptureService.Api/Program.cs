@@ -14,8 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
-builder.Host.AddHostInfrastructure(builder.Configuration);
-builder.Services.AddInfrastructure(builder.Configuration);
+
 
 #region RecyclableMemoryStreamManager
 
@@ -38,6 +37,10 @@ builder.Services.AddSingleton<BlobServiceClient>(_ =>
 builder.Services.AddScoped<RecordingHandler>();
 builder.Services.AddScoped<IRecordingOrchestrator, RecordingOrchestrator>();
 builder.Services.AddScoped<IRecordingUploader, AzureBlobRecordingUploader>();
+builder.Services.AddSingleton<IMessagePublisher, RabbitMqPublisher>();
+
+builder.Host.AddHostInfrastructure(builder.Configuration);
+builder.Services.AddInfrastructure(builder.Configuration);
 
 #endregion
 

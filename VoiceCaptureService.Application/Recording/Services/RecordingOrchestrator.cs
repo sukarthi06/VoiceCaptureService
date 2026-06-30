@@ -12,6 +12,7 @@ namespace VoiceCaptureService.Application.Recording.Services;
 public class RecordingOrchestrator(
     RecyclableMemoryStreamManager streamManager,
     IRecordingUploader recordingUploader,
+    IMessagePublisher publisher,
     ILogger<RecordingOrchestrator> logger) : IRecordingOrchestrator, IAsyncDisposable
 {
     RecordingSession RecordingSession { get; set; } = new();
@@ -55,10 +56,16 @@ public class RecordingOrchestrator(
 
         await recordingUploader.FinalizeAsync(cancellationToken);
 
+        await publisher.PublishAsync(new RecordingCompletedMessage
+        {
+            RecordingId = recordingId.Value,
+            CompletedAt = DateTime.UtcNow
+        }, cancellationToken);
+
         RecordingSession?.Status = RecordingStatus.Completed;
         RecordingSession?.StoppedAt = DateTime.UtcNow;
 
-        logger.LogInformation("Stopping recording for ID: {RecordingId}", recordingId);
+        //logger.LogInformation("Stopping recording for ID: {RecordingId}", recordingId);
         logger.LogInformation("Recording session completed: {RecordingSession}",
             JsonSerializer.Serialize(RecordingSession));
     }
@@ -66,8 +73,8 @@ public class RecordingOrchestrator(
     public void UpdateMetadata(RecordingId recordingId, RecordingMetadata metadata)
     {
         RecordingSession.RecordingMetadata = metadata;
-        logger.LogInformation("Updated metadata for recording ID: {RecordingId}, Metadata: {Metadata}",
-            recordingId, JsonSerializer.Serialize(metadata));
+        //logger.LogInformation("Updated metadata for recording ID: {RecordingId}, Metadata: {Metadata}",
+        //    recordingId, JsonSerializer.Serialize(metadata));
     }
     // Called when DI scope ends (i.e. WebSocket connection closes)
     public async ValueTask DisposeAsync()
@@ -87,6 +94,6 @@ public class RecordingOrchestrator(
             await recordingUploader.UploadPartAsync(_staging, cancellationToken);
 
         await recordingUploader.FinalizeAsync(cancellationToken);
-        logger.LogInformation("Session finalized: {RecordingId}", recordingId);
+        //logger.LogInformation("Session finalized: {RecordingId}", recordingId);
     }
 }
