@@ -7,7 +7,7 @@ public interface IRecordingOrchestrator
     Task<RecordingId> StartRecordingAsync(CancellationToken cancellationToken);
     Task AppendAudioChunkAsync(RecordingId recordingId, ReadOnlyMemory<byte> pcmData, CancellationToken cancellationToken);
     Task StopRecordingAsync(RecordingId recordingId, CancellationToken cancellationToken);
-    void UpdateMetadata(RecordingId recordingId, RecordingMetadata metadata);
+    Task UpdateMetadataAsync(RecordingId recordingId, RecordingMetadata metadata, CancellationToken cancellationToken = default);
     Task FinalizeSessionAsync(RecordingId recordingId, CancellationToken cancellationToken);
     Task AbortSessionAsync(RecordingId recordingId);
 }

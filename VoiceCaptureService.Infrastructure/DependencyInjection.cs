@@ -1,8 +1,12 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
+using VoiceCaptureService.Infrastructure.Data;
+using VoiceCaptureService.Infrastructure.Data.Interfaces;
+using VoiceCaptureService.Infrastructure.Data.Services;
 using VoiceCaptureService.Infrastructure.Recording.Interfaces;
 using VoiceCaptureService.Infrastructure.Recording.Services;
 
@@ -20,6 +24,23 @@ public static class DependencyInjection
             var logger = sp.GetRequiredService<ILogger<RabbitMqPublisher>>();
             return RabbitMqPublisher.CreateAsync(configuration, logger).GetAwaiter().GetResult();
         });
+
+        services.AddDbContext<ApplicationDbContext>(options =>
+        {
+            options.UseNpgsql(
+                configuration.GetConnectionString("RecordingDb"),
+                npgsqlOptions =>
+                {
+                    npgsqlOptions.EnableRetryOnFailure(
+                        maxRetryCount: 5,
+                        maxRetryDelay: TimeSpan.FromSeconds(10),
+                        errorCodesToAdd: null);
+                });
+        });
+
+        //services.AddScoped<IRecordingUploader, AzureBlobRecordingUploader>();
+        //services.AddSingleton<IMessagePublisher, RabbitMqPublisher>();
+        //services.AddScoped<IRecordingRepo, RecordingRepo>();
 
         return services;
     }

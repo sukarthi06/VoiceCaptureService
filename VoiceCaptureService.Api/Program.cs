@@ -5,6 +5,8 @@ using VoiceCaptureService.Api.Handlers;
 using VoiceCaptureService.Application.Recording.Interfaces;
 using VoiceCaptureService.Application.Recording.Services;
 using VoiceCaptureService.Infrastructure;
+using VoiceCaptureService.Infrastructure.Data.Interfaces;
+using VoiceCaptureService.Infrastructure.Data.Services;
 using VoiceCaptureService.Infrastructure.Recording.Interfaces;
 using VoiceCaptureService.Infrastructure.Recording.Services;
 
@@ -38,6 +40,7 @@ builder.Services.AddScoped<RecordingHandler>();
 builder.Services.AddScoped<IRecordingOrchestrator, RecordingOrchestrator>();
 builder.Services.AddScoped<IRecordingUploader, AzureBlobRecordingUploader>();
 builder.Services.AddSingleton<IMessagePublisher, RabbitMqPublisher>();
+builder.Services.AddScoped<IRecordingRepo, RecordingRepo>();
 
 builder.Host.AddHostInfrastructure(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);

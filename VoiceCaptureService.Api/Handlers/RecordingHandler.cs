@@ -136,7 +136,7 @@ public class RecordingHandler(IRecordingOrchestrator recordingOrchestrator, ILog
             }
             else
             {
-                recordingOrchestrator?.UpdateMetadata(recordingId, recordingMetadata);
+                await recordingOrchestrator.UpdateMetadataAsync(recordingId, recordingMetadata, cancellationToken);
             }
         }
         catch (Exception ex) {            

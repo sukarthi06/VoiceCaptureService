@@ -5,6 +5,7 @@ using VoiceCaptureService.Application.Recording.Interfaces;
 using VoiceCaptureService.Domain.Recording.Entities;
 using VoiceCaptureService.Domain.Recording.Enums;
 using VoiceCaptureService.Domain.Recording.ValueObjects;
+using VoiceCaptureService.Infrastructure.Data.Interfaces;
 using VoiceCaptureService.Infrastructure.Recording.Interfaces;
 
 namespace VoiceCaptureService.Application.Recording.Services;
@@ -13,25 +14,31 @@ public class RecordingOrchestrator(
     RecyclableMemoryStreamManager streamManager,
     IRecordingUploader recordingUploader,
     IMessagePublisher publisher,
+    IRecordingRepo recordingRepo,
     ILogger<RecordingOrchestrator> logger) : IRecordingOrchestrator, IAsyncDisposable
 {
-    RecordingSession RecordingSession { get; set; } = new();
+    RecordingSession RecordingSession { get; set; } = new();    
     // Field — lives for the lifetime of the orchestrator instance
     private readonly RecyclableMemoryStream _staging = streamManager.GetStream("pcm-staging");
     private const int StagingThreshold = 4 * 1024 * 1024;  // 4 MB
 
     public async Task<RecordingId> StartRecordingAsync(CancellationToken cancellationToken)
-    {
-        RecordingSession = new RecordingSession { 
-            RecordingId = RecordingId.Of(Guid.NewGuid()), 
-            StartedAt = DateTime.UtcNow, 
-            Status = RecordingStatus.Started
-        };
-        logger.LogInformation("Started new Recording Session: {RecordingSession}", 
-            JsonSerializer.Serialize(RecordingSession));
+    {       
         
         var captureKey = $"captures/{DateTime.UtcNow:yyyy-MM-dd}/{RecordingSession.RecordingId}.raw";
+        
+        RecordingSession = new RecordingSession
+        {
+            RecordingId = RecordingId.Of(Guid.NewGuid()),
+            StartedAt = DateTime.UtcNow,
+            Status = RecordingStatus.Started,
+            StoragePath = captureKey
+        };
+        logger.LogInformation("Started new Recording Session: {RecordingSession}",
+            JsonSerializer.Serialize(RecordingSession));
+
         await recordingUploader.InitiateAsync(captureKey, cancellationToken);
+        await recordingRepo.SaveRecordingSessionAsync(RecordingSession, cancellationToken);
 
         return RecordingSession.RecordingId;
     }
@@ -65,14 +72,19 @@ public class RecordingOrchestrator(
         RecordingSession?.Status = RecordingStatus.Completed;
         RecordingSession?.StoppedAt = DateTime.UtcNow;
 
+        await recordingRepo.UpdateRecordingSessionAsync(RecordingSession!, cancellationToken);
+
         //logger.LogInformation("Stopping recording for ID: {RecordingId}", recordingId);
-        logger.LogInformation("Recording session completed: {RecordingSession}",
+        logger.LogInformation("Recording session stopped: {RecordingSession}",
             JsonSerializer.Serialize(RecordingSession));
     }
 
-    public void UpdateMetadata(RecordingId recordingId, RecordingMetadata metadata)
+    public async Task UpdateMetadataAsync(RecordingId recordingId, RecordingMetadata metadata,
+        CancellationToken cancellationToken = default)
     {
         RecordingSession.RecordingMetadata = metadata;
+        await recordingRepo.UpdateRecordingMetadataAsync(recordingId, metadata, cancellationToken);
+
         //logger.LogInformation("Updated metadata for recording ID: {RecordingId}, Metadata: {Metadata}",
         //    recordingId, JsonSerializer.Serialize(metadata));
     }
