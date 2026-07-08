@@ -1,12 +1,12 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using RecordingGrpcService.Grpc.Protos;
 using Serilog;
-using VoiceCaptureService.Infrastructure.Data;
+using VoiceCaptureService.Infrastructure.Data.Grpc;
 using VoiceCaptureService.Infrastructure.Data.Interfaces;
-using VoiceCaptureService.Infrastructure.Data.Services;
+using VoiceCaptureService.Infrastructure.Data.Mappers;
 using VoiceCaptureService.Infrastructure.Recording.Interfaces;
 using VoiceCaptureService.Infrastructure.Recording.Services;
 
@@ -19,28 +19,19 @@ public static class DependencyInjection
         IConfiguration configuration)
     {
         // Add infrastructure services here
+        services.AddGrpcClient<RecordingService.RecordingServiceClient>(o =>
+        {
+            o.Address = new Uri(configuration["RecordingGrpcService:Address"]!);
+        });
+
         services.AddSingleton<IMessagePublisher>(sp =>
         {
             var logger = sp.GetRequiredService<ILogger<RabbitMqPublisher>>();
             return RabbitMqPublisher.CreateAsync(configuration, logger).GetAwaiter().GetResult();
         });
 
-        services.AddDbContext<ApplicationDbContext>(options =>
-        {
-            options.UseNpgsql(
-                configuration.GetConnectionString("RecordingDb"),
-                npgsqlOptions =>
-                {
-                    npgsqlOptions.EnableRetryOnFailure(
-                        maxRetryCount: 5,
-                        maxRetryDelay: TimeSpan.FromSeconds(10),
-                        errorCodesToAdd: null);
-                });
-        });
-
-        //services.AddScoped<IRecordingUploader, AzureBlobRecordingUploader>();
-        //services.AddSingleton<IMessagePublisher, RabbitMqPublisher>();
-        //services.AddScoped<IRecordingRepo, RecordingRepo>();
+        services.AddSingleton<RecordingMapper>();
+        services.AddScoped<IGrpcRecordingSessionClient, GrpcRecordingSessionClient>();
 
         return services;
     }

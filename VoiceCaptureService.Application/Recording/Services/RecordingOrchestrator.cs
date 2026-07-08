@@ -14,7 +14,7 @@ public class RecordingOrchestrator(
     RecyclableMemoryStreamManager streamManager,
     IRecordingUploader recordingUploader,
     IMessagePublisher publisher,
-    IRecordingRepo recordingRepo,
+    IGrpcRecordingSessionClient grpcRecordingSessionClient,
     ILogger<RecordingOrchestrator> logger) : IRecordingOrchestrator, IAsyncDisposable
 {
     RecordingSession RecordingSession { get; set; } = new();    
@@ -38,7 +38,7 @@ public class RecordingOrchestrator(
             JsonSerializer.Serialize(RecordingSession));
 
         await recordingUploader.InitiateAsync(captureKey, cancellationToken);
-        await recordingRepo.SaveRecordingSessionAsync(RecordingSession, cancellationToken);
+        await grpcRecordingSessionClient.SaveRecordingSessionAsync(RecordingSession, cancellationToken);
 
         return RecordingSession.RecordingId;
     }
@@ -72,7 +72,7 @@ public class RecordingOrchestrator(
         RecordingSession?.Status = RecordingStatus.Completed;
         RecordingSession?.StoppedAt = DateTime.UtcNow;
 
-        await recordingRepo.UpdateRecordingSessionAsync(RecordingSession!, cancellationToken);
+        await grpcRecordingSessionClient.UpdateRecordingSessionAsync(RecordingSession!, cancellationToken);
 
         //logger.LogInformation("Stopping recording for ID: {RecordingId}", recordingId);
         logger.LogInformation("Recording session stopped: {RecordingSession}",
@@ -83,7 +83,7 @@ public class RecordingOrchestrator(
         CancellationToken cancellationToken = default)
     {
         RecordingSession.RecordingMetadata = metadata;
-        await recordingRepo.UpdateRecordingMetadataAsync(recordingId, metadata, cancellationToken);
+        await grpcRecordingSessionClient.UpdateRecordingMetadataAsync(recordingId, metadata, cancellationToken);
 
         //logger.LogInformation("Updated metadata for recording ID: {RecordingId}, Metadata: {Metadata}",
         //    recordingId, JsonSerializer.Serialize(metadata));
