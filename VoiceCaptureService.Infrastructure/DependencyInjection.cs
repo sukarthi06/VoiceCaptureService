@@ -24,6 +24,11 @@ public static class DependencyInjection
             o.Address = new Uri(configuration["RecordingGrpcService:Address"]!);
         });
 
+        services.AddGrpcClient<RecordingChunkService.RecordingChunkServiceClient>(o =>
+        {
+            o.Address = new Uri(configuration["RecordingGrpcService:Address"]!);
+        });
+
         services.AddSingleton<IMessagePublisher>(sp =>
         {
             var logger = sp.GetRequiredService<ILogger<RabbitMqPublisher>>();
@@ -31,7 +36,11 @@ public static class DependencyInjection
         });
 
         services.AddSingleton<RecordingMapper>();
+        services.AddSingleton<RecordingChunkMapper>();
+
         services.AddScoped<IGrpcRecordingSessionClient, GrpcRecordingSessionClient>();
+        services.AddScoped<IGrpcRecordingChunkClient, GrpcRecordingChunkClient>();
+
 
         return services;
     }

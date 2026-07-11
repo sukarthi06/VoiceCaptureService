@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Data\Protos\recordingchunk.proto" />
     <None Remove="Data\Protos\recordings.proto" />
   </ItemGroup>
 
@@ -33,6 +34,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Protobuf Include="Data\Protos\recordingchunk.proto" GrpcServices="Client" />
     <Protobuf Include="Data\Protos\recordings.proto" GrpcServices="Client" />
   </ItemGroup>
 

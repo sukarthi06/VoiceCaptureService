@@ -36,6 +36,7 @@ public class AzureBlobRecordingUploader(
 {
     //private const int BlockSizeThreshold = 4 * 1024 * 1024;  // 4 MB
 
+    private BlobContainerClient? _containerClient;
     private BlockBlobClient? _blobClient;
     private List<string> _blockIds = [];
     private string? _captureKey;
@@ -45,11 +46,11 @@ public class AzureBlobRecordingUploader(
         _captureKey = captureKey;
         _blockIds = [];
 
-        var container = blobServiceClient.GetBlobContainerClient("audio-captures");
-        await container.CreateIfNotExistsAsync(cancellationToken: ct);
-        _blobClient = container.GetBlockBlobClient(captureKey);
+        _containerClient = blobServiceClient.GetBlobContainerClient("audio-captures");
+        await _containerClient.CreateIfNotExistsAsync(cancellationToken: ct);
+        _blobClient = _containerClient.GetBlockBlobClient(captureKey);
 
-        if(container != null && _blobClient != null)
+        if(_containerClient != null && _blobClient != null)
             logger.LogInformation("Blob upload initiated: {Key}", captureKey);
     }
 
@@ -82,5 +83,16 @@ public class AzureBlobRecordingUploader(
         // Azure staged blocks expire automatically — but log for observability
         logger.LogWarning("Upload aborted: {Key}", _captureKey);
         await Task.CompletedTask;
+    }
+
+    public async Task CommitChunkAsync(RecyclableMemoryStream chunk, string chunkKey, CancellationToken ct)
+    {        
+        chunk.Seek(0, SeekOrigin.Begin);
+
+        if(_containerClient == null) return;
+
+        var blobClient = _containerClient.GetBlobClient(chunkKey);
+        if(blobClient != null)
+            await blobClient.UploadAsync(chunk, cancellationToken: ct);
     }
 }

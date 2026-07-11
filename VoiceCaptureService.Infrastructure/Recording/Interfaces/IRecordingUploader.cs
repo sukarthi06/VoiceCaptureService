@@ -8,4 +8,5 @@ public interface IRecordingUploader
     Task UploadPartAsync(RecyclableMemoryStream staging, CancellationToken ct);
     Task FinalizeAsync(CancellationToken ct);
     Task AbortAsync();
+    Task CommitChunkAsync(RecyclableMemoryStream chunk, string chunkKey, CancellationToken ct);
 }

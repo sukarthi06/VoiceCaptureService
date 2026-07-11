@@ -15,12 +15,16 @@ public class RecordingOrchestrator(
     IRecordingUploader recordingUploader,
     IMessagePublisher publisher,
     IGrpcRecordingSessionClient grpcRecordingSessionClient,
+    IGrpcRecordingChunkClient grpcRecordingChunkClient,
     ILogger<RecordingOrchestrator> logger) : IRecordingOrchestrator, IAsyncDisposable
 {
     RecordingSession RecordingSession { get; set; } = new();    
     // Field — lives for the lifetime of the orchestrator instance
     private readonly RecyclableMemoryStream _staging = streamManager.GetStream("pcm-staging");
     private const int StagingThreshold = 4 * 1024 * 1024;  // 4 MB
+    private string _chunkKey = string.Empty;
+    private int _chunkCount = 0;
+    private ChunkId? _chunkId;
 
     public async Task<RecordingId> StartRecordingAsync(CancellationToken cancellationToken)
     {       
@@ -53,13 +57,27 @@ public class RecordingOrchestrator(
         await _staging.WriteAsync(pcmData, cancellationToken);
 
         if (_staging.Length >= StagingThreshold)
+        {
+            _chunkId = ChunkId.Of(Guid.NewGuid());
+            _chunkKey = $"captures/{DateTime.UtcNow:yyyy-MM-dd}/{_chunkId}.raw";
+            _chunkCount++;
             await recordingUploader.UploadPartAsync(_staging, cancellationToken);
+            await recordingUploader.CommitChunkAsync(_staging, _chunkKey, cancellationToken);            
+            await grpcRecordingChunkClient.SaveRecordingChunkAsync(GetRecordingChunk(), cancellationToken);
+        }            
     }
 
     public async Task StopRecordingAsync(RecordingId recordingId, CancellationToken cancellationToken) 
     {
         if (_staging.Length > 0)
+        {
+            _chunkId = ChunkId.Of(Guid.NewGuid());
+            _chunkKey = $"captures/{DateTime.UtcNow:yyyy-MM-dd}/{_chunkId}.raw";
+            _chunkCount++;
+            await recordingUploader.CommitChunkAsync(_staging, _chunkKey, cancellationToken);
             await recordingUploader.UploadPartAsync(_staging, cancellationToken);
+            await grpcRecordingChunkClient.SaveRecordingChunkAsync(GetRecordingChunk(), cancellationToken);
+        }           
 
         await recordingUploader.FinalizeAsync(cancellationToken);
 
@@ -107,5 +125,16 @@ public class RecordingOrchestrator(
 
         await recordingUploader.FinalizeAsync(cancellationToken);
         //logger.LogInformation("Session finalized: {RecordingId}", recordingId);
+    }
+
+    private RecordingChunk GetRecordingChunk()
+    {
+        return new RecordingChunk
+        {
+            ChunkId = _chunkId!,
+            RecordingId = RecordingSession.RecordingId,
+            SequenceNumber = _chunkCount,
+            StoragePath = _chunkKey
+        };
     }
 }
