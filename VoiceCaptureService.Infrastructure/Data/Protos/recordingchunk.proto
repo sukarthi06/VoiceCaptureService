@@ -10,6 +10,9 @@ service RecordingChunkService {
   rpc SaveRecordingChunk (RecordingChunkRequest) returns (google.protobuf.Empty);
   rpc GetRecordingChunk (GetRecordingChunkRequest) returns (GetRecordingChunkResponse);
   rpc UpdateRecordingChunk (UpdateRecordingChunkRequest) returns (google.protobuf.Empty);
+  rpc UpdateRecordingChunkWav (UpdateRecordingChunkWavRequest) returns (UpdateRecordingChunkWavResponse);
+  rpc UpdateRecordingChunkTranscriptPath (UpdateRecordingChunkTranscriptPathRequest) returns (UpdateRecordingChunkTranscriptPathResponse);
+  rpc GetSubsequentRecordingChunks(GetSubsequentRecordingChunksRequest) returns (GetSubsequentRecordingChunksResponse);
 }
 
 message RecordingChunkRequest {
@@ -21,7 +24,15 @@ message GetRecordingChunkRequest {
 }
 
 message GetRecordingChunkResponse {
-  repeated RecordingChunkDto recording_chunk = 1;
+  RecordingChunkDto recording_chunk = 1;
+}
+
+message GetSubsequentRecordingChunksRequest{
+	string chunk_id = 1;
+}
+
+message GetSubsequentRecordingChunksResponse {
+  repeated RecordingChunkDto recording_chunks = 1;
 }
 
 message UpdateRecordingChunkRequest {
@@ -29,9 +40,29 @@ message UpdateRecordingChunkRequest {
   string storage_path = 2;
 }
 
+message UpdateRecordingChunkWavRequest {
+  string chunk_id = 1;
+  string wav_path = 2;
+}
+
+message UpdateRecordingChunkWavResponse {
+  bool is_success = 1;
+}
+
+message UpdateRecordingChunkTranscriptPathRequest {
+  string chunk_id = 1;
+  string transcript_path = 2;
+}
+
+message UpdateRecordingChunkTranscriptPathResponse {
+  bool is_success = 1;
+}
+
 message RecordingChunkDto {  
   string chunk_id = 1;
   string recording_id = 2;  
   int32 sequence_number	= 3;
   string storage_path = 4;
+  optional string wav_path = 5;
+  optional string transcript_path = 6;
 }

@@ -35,7 +35,7 @@ builder.Services.AddSingleton<BlobServiceClient>(_ =>
 builder.Services.AddScoped<RecordingHandler>();
 builder.Services.AddScoped<IRecordingOrchestrator, RecordingOrchestrator>();
 builder.Services.AddScoped<IRecordingUploader, AzureBlobRecordingUploader>();
-builder.Services.AddSingleton<IMessagePublisher, RabbitMqPublisher>();
+//builder.Services.AddSingleton<IMessagePublisher, RabbitMqPublisher>();
 
 builder.Host.AddHostInfrastructure(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);

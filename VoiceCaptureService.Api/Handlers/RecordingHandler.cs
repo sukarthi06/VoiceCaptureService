@@ -54,7 +54,9 @@ public class RecordingHandler(IRecordingOrchestrator recordingOrchestrator, ILog
                     case WebSocketMessageType.Binary:
                         //logger.LogInformation("Received binary data of length: {Length}", result.Count);
                         await recordingOrchestrator.AppendAudioChunkAsync(recordingId, 
-                            receivedBuffer.AsMemory(0, result.Count), cancellationToken);                        
+                            receivedBuffer.AsMemory(0, result.Count), cancellationToken);
+                        
+                        await recordingOrchestrator.StageChunkAsync(cancellationToken);
                         break;
                     case WebSocketMessageType.Text:
 

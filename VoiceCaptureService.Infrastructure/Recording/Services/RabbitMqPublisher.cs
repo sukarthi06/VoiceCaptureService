@@ -10,14 +10,17 @@ public class RabbitMqPublisher(
         IConnection connection,
         ILogger<RabbitMqPublisher> logger) : IMessagePublisher, IAsyncDisposable
 {
-    private const string QueueName = "recording.completed";
-
     public static async Task<RabbitMqPublisher> CreateAsync(
         IConfiguration config,
-        ILogger<RabbitMqPublisher> logger)
+        ILogger<RabbitMqPublisher> logger,
+        IEnumerable<string> queueNames)
     {
         var host = config["RabbitMQ:Host"] ?? throw new InvalidOperationException("Configuration value 'RabbitMQ:Host' is missing.");
         var port = int.Parse(config["RabbitMQ:Port"] ?? "5672");
+        var queues = queueNames.ToArray();
+
+        if (queues.Length == 0)
+            throw new ArgumentException("At least one queue name must be provided.", nameof(queueNames));
 
         try
         {
@@ -33,16 +36,19 @@ public class RabbitMqPublisher(
 
             using (var setupChannel = await connection.CreateChannelAsync())
             {
-                await setupChannel.QueueDeclareAsync(
-                    queue: QueueName,
-                    durable: true,
-                    exclusive: false,
-                    autoDelete: false);
+                foreach (var queueName in queues)
+                {
+                    await setupChannel.QueueDeclareAsync(
+                        queue: queueName,
+                        durable: true,
+                        exclusive: false,
+                        autoDelete: false);
+                }
             }
 
             logger.LogInformation(
-                "Connected to RabbitMQ at {Host}:{Port}, queue '{Queue}' ready",
-                host, port, QueueName);
+                "Connected to RabbitMQ at {Host}:{Port}, queues [{Queues}] ready",
+                host, port, string.Join(", ", queues));
 
             return new RabbitMqPublisher(connection, logger);
         }
@@ -56,14 +62,14 @@ public class RabbitMqPublisher(
         }
     }
 
-    public async Task PublishAsync<T>(T message, CancellationToken ct)
+    public async Task PublishAsync<T>(string queueName, T message, CancellationToken ct)
     {
         var messageType = typeof(T).Name;
 
         try
         {
-            logger.LogDebug("Publishing {MessageType} to queue '{Queue}'...",
-                messageType, QueueName);
+            //logger.LogDebug("Publishing {MessageType} to queue '{Queue}'...",
+            //    messageType, queueName);
 
             using var channel = await connection.CreateChannelAsync(cancellationToken: ct);
 
@@ -72,7 +78,7 @@ public class RabbitMqPublisher(
 
             await channel.BasicPublishAsync(
                 exchange: string.Empty,
-                routingKey: QueueName,
+                routingKey: queueName,
                 mandatory: false,
                 basicProperties: props,
                 body: body,
@@ -80,20 +86,20 @@ public class RabbitMqPublisher(
 
             logger.LogInformation(
                 "Published {MessageType} to queue '{Queue}' successfully. Payload: {@Message}",
-                messageType, QueueName, message);
+                messageType, queueName, message);
         }
         catch (Exception ex)
         {
             logger.LogError(ex,
                 "Failed to publish {MessageType} to queue '{Queue}'",
-                messageType, QueueName);
+                messageType, queueName);
             throw;
         }
     }
 
     public async ValueTask DisposeAsync()
     {
-        logger.LogInformation("Closing RabbitMQ connection...");
+        //logger.LogInformation("Closing RabbitMQ connection...");
         await connection.CloseAsync();
         logger.LogInformation("RabbitMQ connection closed");
     }

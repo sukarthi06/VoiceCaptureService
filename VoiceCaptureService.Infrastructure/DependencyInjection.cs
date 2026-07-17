@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using RecordingGrpcService.Grpc.Protos;
 using Serilog;
+using VoiceCaptureService.Domain;
 using VoiceCaptureService.Infrastructure.Data.Grpc;
 using VoiceCaptureService.Infrastructure.Data.Interfaces;
 using VoiceCaptureService.Infrastructure.Data.Mappers;
@@ -29,11 +30,17 @@ public static class DependencyInjection
             o.Address = new Uri(configuration["RecordingGrpcService:Address"]!);
         });
 
-        services.AddSingleton<IMessagePublisher>(sp =>
-        {
-            var logger = sp.GetRequiredService<ILogger<RabbitMqPublisher>>();
-            return RabbitMqPublisher.CreateAsync(configuration, logger).GetAwaiter().GetResult();
-        });
+        #region RabbitMQ
+
+        services.AddSingleton<RabbitMqPublisher>(sp =>
+            RabbitMqPublisher.CreateAsync(
+                sp.GetRequiredService<IConfiguration>(),
+                sp.GetRequiredService<ILogger<RabbitMqPublisher>>(),
+                queueNames: [MessageQueueNames.RecordingCompletedQueue, MessageQueueNames.ChunkCompletedQueue]
+            ).GetAwaiter().GetResult());
+        services.AddSingleton<IMessagePublisher>(sp => sp.GetRequiredService<RabbitMqPublisher>());
+
+        #endregion
 
         services.AddSingleton<RecordingMapper>();
         services.AddSingleton<RecordingChunkMapper>();

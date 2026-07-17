@@ -13,6 +13,7 @@ service RecordingService {
   rpc UpdateRecordingMetadata (UpdateRecordingMetadataRequest) returns (UpdateRecordingMetadataResponse);
   rpc UpdateStoragePath (UpdateStoragePathRequest) returns (UpdateStoragePathResponse);
   rpc UpdateWavPath (UpdateWavPathRequest) returns (UpdateWavPathResponse);
+  rpc GetRecordingMetadata (GetRecordingMetadataRequest) returns (GetRecordingMetadataResponse);
 }
 
 message RecordingSessionRequest {
@@ -30,6 +31,14 @@ message GetRecordingSessionRequest {
 
 message GetRecordingSessionResponse {
   RecordingSessionDto recording_session = 1;
+}
+
+message GetRecordingMetadataRequest {
+  string recording_id = 1;
+}
+
+message GetRecordingMetadataResponse {
+  RecordingMetadataDto metadata = 1;
 }
 
 message UpdateRecordingSessionRequest {

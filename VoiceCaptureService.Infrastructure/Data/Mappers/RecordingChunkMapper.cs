@@ -8,27 +8,18 @@ namespace VoiceCaptureService.Infrastructure.Data.Mappers;
 [Mapper]
 public partial class RecordingChunkMapper : MapperBase
 {
-    // ---- RecordingChunk ----    
-    public partial RecordingChunk ToDomain(RecordingChunkDto dto);    
+    // ---- RecordingChunk ----
+    [MapperIgnoreSource(nameof(RecordingChunkDto.WavPath))]
+    [MapperIgnoreSource(nameof(RecordingChunkDto.TranscriptPath))]
+    [MapperIgnoreSource(nameof(RecordingChunkDto.HasWavPath))]
+    [MapperIgnoreSource(nameof(RecordingChunkDto.HasTranscriptPath))]
+    public partial RecordingChunk ToDomain(RecordingChunkDto dto);
+    
+    [MapperIgnoreTarget(nameof(RecordingChunkDto.WavPath))]
+    [MapperIgnoreTarget(nameof(RecordingChunkDto.TranscriptPath))]
     public partial RecordingChunkDto ToDto(RecordingChunk entity);
 
     // ---- GetRecordingChunkResponse (repeated RecordingChunkDto) ----
-    public GetRecordingChunkResponse ToGetRecordingChunkResponse(IEnumerable<RecordingChunk> chunks)
-    {
-        var resp = new GetRecordingChunkResponse();
-        if (chunks == null) return resp;
-        foreach (var c in chunks)
-        {
-            resp.RecordingChunk.Add(ToDto(c));
-        }
-        return resp;
-    }
-
-    public IEnumerable<RecordingChunk> ToDomain(GetRecordingChunkResponse response)
-    {
-        if (response == null) return Enumerable.Empty<RecordingChunk>();
-        return response.RecordingChunk.Select(ToDomain);
-    }
 
     // ---- ChunkId (string <-> value object) ----
     public ChunkId MapChunkId(string id) => ChunkId.Of(ParseGuid(id));
