@@ -18,6 +18,7 @@ public partial class RecordingMapper : MapperBase
     [MapperIgnoreTarget(nameof(RecordingSession.LastModifiedBy))]
     [MapperIgnoreTarget(nameof(RecordingSession.RecordStatus))]
     [MapperIgnoreSource(nameof(RecordingSessionDto.WavPath))]
+    [MapperIgnoreSource(nameof(RecordingSessionDto.TranscriptPath))]
     public partial RecordingSession ToDomain(RecordingSessionDto dto);
 
     [MapProperty(nameof(RecordingSession.RecordingMetadata), nameof(RecordingSessionDto.Metadata))]
@@ -27,6 +28,7 @@ public partial class RecordingMapper : MapperBase
     [MapperIgnoreSource(nameof(RecordingSession.LastModifiedBy))]
     [MapperIgnoreSource(nameof(RecordingSession.RecordStatus))]
     [MapperIgnoreTarget(nameof(RecordingSessionDto.WavPath))]
+    [MapperIgnoreTarget(nameof(RecordingSessionDto.TranscriptPath))]
     public partial RecordingSessionDto ToDto(RecordingSession entity);
 
 

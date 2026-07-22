@@ -11,8 +11,6 @@ public partial class RecordingChunkMapper : MapperBase
     // ---- RecordingChunk ----
     [MapperIgnoreSource(nameof(RecordingChunkDto.WavPath))]
     [MapperIgnoreSource(nameof(RecordingChunkDto.TranscriptPath))]
-    [MapperIgnoreSource(nameof(RecordingChunkDto.HasWavPath))]
-    [MapperIgnoreSource(nameof(RecordingChunkDto.HasTranscriptPath))]
     public partial RecordingChunk ToDomain(RecordingChunkDto dto);
     
     [MapperIgnoreTarget(nameof(RecordingChunkDto.WavPath))]
