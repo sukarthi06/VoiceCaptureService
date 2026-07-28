@@ -1,4 +1,5 @@
-﻿using VoiceCaptureService.Domain.Recording.ValueObjects;
+﻿using VoiceCaptureService.Domain.Recording.Entities;
+using VoiceCaptureService.Domain.Recording.ValueObjects;
 
 namespace VoiceCaptureService.Application.Recording.Interfaces;
 

@@ -1,4 +1,5 @@
 ﻿using System.Buffers;
+using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
@@ -111,13 +112,24 @@ public class RecordingHandler(IRecordingOrchestrator recordingOrchestrator, ILog
     {        
         try
         {            
-            var options = new JsonSerializerOptions
+            var _jsonOptions = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             };
 
-            var recordingCommand = JsonSerializer.Deserialize<RecordingCommand>(textMessage, options);            
-            if(recordingCommand?.Type?.ToLowerInvariant() == "stop")
+            var recordingCommand = JsonSerializer.Deserialize<RecordingCommand>(textMessage, _jsonOptions);
+            if (recordingCommand?.Type?.ToLowerInvariant() == "start")
+            {
+                var ackRecordingId = JsonSerializer.SerializeToUtf8Bytes(recordingId, _jsonOptions);
+                await webSocket.SendAsync(
+                    new ArraySegment<byte>(ackRecordingId),
+                    WebSocketMessageType.Text,
+                    endOfMessage: true,
+                    cancellationToken);
+                return;
+            }
+
+            if (recordingCommand?.Type?.ToLowerInvariant() == "stop")
             {                
                 logger.LogInformation("Received stop command for recording ID: {RecordingId}.", recordingId);
                 await recordingOrchestrator.StopRecordingAsync(recordingId, cancellationToken);
@@ -130,7 +142,7 @@ public class RecordingHandler(IRecordingOrchestrator recordingOrchestrator, ILog
                 return;
             }
 
-            var recordingMetadata = JsonSerializer.Deserialize<RecordingMetadata>(textMessage, options);
+            var recordingMetadata = JsonSerializer.Deserialize<RecordingMetadata>(textMessage, _jsonOptions);
             if (recordingMetadata is null || recordingMetadata.SampleRate <= 0 || recordingMetadata.ChannelCount <= 0 ||
                     recordingMetadata.BitsPerSample <= 0 || string.IsNullOrWhiteSpace(recordingMetadata.MimeType))
             {
