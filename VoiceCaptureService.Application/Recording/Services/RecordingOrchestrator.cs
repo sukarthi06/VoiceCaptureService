@@ -8,7 +8,6 @@ using VoiceCaptureService.Domain.Recording.Enums;
 using VoiceCaptureService.Domain.Recording.ValueObjects;
 using VoiceCaptureService.Infrastructure.Data.Interfaces;
 using VoiceCaptureService.Infrastructure.Recording.Interfaces;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace VoiceCaptureService.Application.Recording.Services;
 
@@ -33,7 +32,7 @@ public class RecordingOrchestrator(
     public async Task<RecordingId> StartRecordingAsync(CancellationToken cancellationToken)
     {       
         
-        var captureKey = $"captures/{DateTime.UtcNow:yyyy-MM-dd}/{recordingSession.RecordingId}.raw";
+        var captureKey = $"captures/{DateTime.UtcNow:yyyy-MM-dd}/{recordingSession.RecordingId.Value}.raw";
         
         recordingSession = new RecordingSession
         {
@@ -70,7 +69,7 @@ public class RecordingOrchestrator(
             chunkToProcess.Position = 0;
 
             _chunkId = ChunkId.Of(Guid.NewGuid());
-            _chunkKey = $"captures/{DateTime.UtcNow:yyyy-MM-dd}/{_chunkId}.raw";
+            _chunkKey = $"captures/{DateTime.UtcNow:yyyy-MM-dd}/{_chunkId.Value}.raw";
             _chunkCount++;
 
             await recordingUploader.CommitChunkAsync(chunkToProcess, _chunkKey, cancellationToken);            
@@ -87,7 +86,7 @@ public class RecordingOrchestrator(
         if (_staging.Length > 0)
         {
             _chunkId = ChunkId.Of(Guid.NewGuid());
-            _chunkKey = $"captures/{DateTime.UtcNow:yyyy-MM-dd}/{_chunkId}.raw";
+            _chunkKey = $"captures/{DateTime.UtcNow:yyyy-MM-dd}/{_chunkId.Value}.raw";
             _chunkCount++;
 
             await recordingUploader.CommitChunkAsync(_staging, _chunkKey, cancellationToken);            

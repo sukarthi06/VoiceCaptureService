@@ -1,5 +1,6 @@
 using Azure.Storage.Blobs;
 using Microsoft.IO;
+using VoiceCaptureService.Api;
 using VoiceCaptureService.Api.Endpoints;
 using VoiceCaptureService.Api.Handlers;
 using VoiceCaptureService.Application.Recording.Interfaces;
@@ -29,20 +30,25 @@ builder.Services.AddSingleton<RecyclableMemoryStreamManager>(_ =>
 
 #region DI
 
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
+
 builder.Services.AddSingleton<BlobServiceClient>(_ =>
     new BlobServiceClient(builder.Configuration["Azure:StorageConnectionString"]));
 
 builder.Services.AddScoped<RecordingHandler>();
 builder.Services.AddScoped<IRecordingOrchestrator, RecordingOrchestrator>();
 builder.Services.AddScoped<IRecordingUploader, AzureBlobRecordingUploader>();
-//builder.Services.AddSingleton<IMessagePublisher, RabbitMqPublisher>();
 
 builder.Host.AddHostInfrastructure(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddObservability(builder.Configuration);
 
 #endregion
 
 var app = builder.Build();
+
+app.UseExceptionHandler();
 
 // Enable WebSockets
 app.UseWebSockets(new WebSocketOptions
