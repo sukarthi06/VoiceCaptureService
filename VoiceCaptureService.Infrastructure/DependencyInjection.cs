@@ -106,9 +106,21 @@ public static class DependencyInjection
             ? OtlpExportProtocol.HttpProtobuf
             : OtlpExportProtocol.Grpc;
 
-        void ConfigureExporter(OtlpExporterOptions otlp)
+        var httpProtobuf = exportProtocol == OtlpExportProtocol.HttpProtobuf;
+        var tracesEndpoint = new Uri(httpProtobuf ? $"{otlpEndpoint.TrimEnd('/')}/v1/traces" : otlpEndpoint);
+        var metricsEndpoint = new Uri(httpProtobuf ? $"{otlpEndpoint.TrimEnd('/')}/v1/metrics" : otlpEndpoint);
+
+        void ConfigureTraceExporter(OtlpExporterOptions otlp)
         {
-            otlp.Endpoint = new Uri(otlpEndpoint);
+            otlp.Endpoint = tracesEndpoint;
+            otlp.Protocol = exportProtocol;
+            if (!string.IsNullOrEmpty(otlpHeaders))
+                otlp.Headers = otlpHeaders;
+        }
+
+        void ConfigureMetricExporter(OtlpExporterOptions otlp)
+        {
+            otlp.Endpoint = metricsEndpoint;
             otlp.Protocol = exportProtocol;
             if (!string.IsNullOrEmpty(otlpHeaders))
                 otlp.Headers = otlpHeaders;
@@ -121,12 +133,12 @@ public static class DependencyInjection
                 .AddAspNetCoreInstrumentation(options =>
                     options.Filter = httpContext => httpContext.Request.Path != "/")
                 .AddHttpClientInstrumentation()
-                .AddOtlpExporter(ConfigureExporter))
+                .AddOtlpExporter(ConfigureTraceExporter))
             .WithMetrics(metrics => metrics
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation()
                 .AddRuntimeInstrumentation()
-                .AddOtlpExporter(ConfigureExporter));
+                .AddOtlpExporter(ConfigureMetricExporter));
 
         return services;
     }
