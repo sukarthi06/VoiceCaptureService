@@ -42,7 +42,10 @@ builder.Services.AddScoped<IRecordingUploader, AzureBlobRecordingUploader>();
 
 builder.Host.AddHostInfrastructure(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddObservability(builder.Configuration);
+if (!builder.Environment.IsEnvironment("Local"))
+{
+    builder.Services.AddObservability(builder.Configuration);
+}
 
 #endregion
 
