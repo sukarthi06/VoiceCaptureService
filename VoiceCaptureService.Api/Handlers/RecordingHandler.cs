@@ -1,5 +1,4 @@
 ﻿using System.Buffers;
-using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
@@ -47,21 +46,22 @@ public class RecordingHandler(IRecordingOrchestrator recordingOrchestrator, ILog
                         return;
                     }
 
-                } while (!result.EndOfMessage);                
+                } while (!result.EndOfMessage);
+                var messageLength = offset; // total bytes accumulated across all reads
                 offset = 0; // Reset offset for the next message
 
                 switch (result.MessageType)
-                {                    
+                {
                     case WebSocketMessageType.Binary:
-                        //logger.LogInformation("Received binary data of length: {Length}", result.Count);
-                        await recordingOrchestrator.AppendAudioChunkAsync(recordingId, 
-                            receivedBuffer.AsMemory(0, result.Count), cancellationToken);
+
+                        await recordingOrchestrator.AppendAudioChunkAsync(recordingId,
+                            receivedBuffer.AsMemory(0, messageLength), cancellationToken);
                         
                         await recordingOrchestrator.StageChunkAsync(cancellationToken);
                         break;
                     case WebSocketMessageType.Text:
 
-                        var message = Encoding.UTF8.GetString(receivedBuffer, 0, result.Count);
+                        var message = Encoding.UTF8.GetString(receivedBuffer, 0, messageLength);
 
                         if (string.IsNullOrWhiteSpace(message))
                         {
@@ -118,6 +118,12 @@ public class RecordingHandler(IRecordingOrchestrator recordingOrchestrator, ILog
             };
 
             var recordingCommand = JsonSerializer.Deserialize<RecordingCommand>(textMessage, _jsonOptions);
+
+            if (recordingCommand?.Type?.ToLowerInvariant() == "ping")
+            {
+                return; // Ignore ping messages
+            }
+
             if (recordingCommand?.Type?.ToLowerInvariant() == "start")
             {
                 var ackRecordingId = JsonSerializer.SerializeToUtf8Bytes(recordingId, _jsonOptions);
