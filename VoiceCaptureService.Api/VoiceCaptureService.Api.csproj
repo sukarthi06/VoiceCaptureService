@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\VoiceCaptureService.Application\VoiceCaptureService.Application.csproj" />
+    <ProjectReference Include="..\VoiceCaptureService.ServiceDefaults\VoiceCaptureService.ServiceDefaults.csproj" />
   </ItemGroup>
 
 </Project>
