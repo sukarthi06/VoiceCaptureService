@@ -19,6 +19,7 @@ public partial class RecordingMapper : MapperBase
     [MapperIgnoreTarget(nameof(RecordingSession.RecordStatus))]
     [MapperIgnoreSource(nameof(RecordingSessionDto.WavPath))]
     [MapperIgnoreSource(nameof(RecordingSessionDto.TranscriptPath))]
+    [MapperIgnoreSource(nameof(RecordingSessionDto.DiarizationPath))]
     public partial RecordingSession ToDomain(RecordingSessionDto dto);
 
     [MapProperty(nameof(RecordingSession.RecordingMetadata), nameof(RecordingSessionDto.Metadata))]
@@ -29,6 +30,7 @@ public partial class RecordingMapper : MapperBase
     [MapperIgnoreSource(nameof(RecordingSession.RecordStatus))]
     [MapperIgnoreTarget(nameof(RecordingSessionDto.WavPath))]
     [MapperIgnoreTarget(nameof(RecordingSessionDto.TranscriptPath))]
+    [MapperIgnoreTarget(nameof(RecordingSessionDto.DiarizationPath))]
     public partial RecordingSessionDto ToDto(RecordingSession entity);
 
 

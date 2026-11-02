@@ -83,33 +83,35 @@ public class RecordingOrchestrator(
 
     public async Task StopRecordingAsync(RecordingId recordingId, CancellationToken cancellationToken) 
     {
+        var completionToken = CancellationToken.None;//To avoid race conditions with the cancellation token.
+
         if (_staging.Length > 0)
         {
             _chunkId = ChunkId.Of(Guid.NewGuid());
             _chunkKey = $"captures/{DateTime.UtcNow:yyyy-MM-dd}/{_chunkId.Value}.raw";
             _chunkCount++;
 
-            await recordingUploader.CommitChunkAsync(_staging, _chunkKey, cancellationToken);            
+            await recordingUploader.CommitChunkAsync(_staging, _chunkKey, completionToken);            
             var recordingChunk = GetRecordingChunk(_staging);
-            await grpcRecordingChunkClient.SaveRecordingChunkAsync(recordingChunk, cancellationToken);
+            await grpcRecordingChunkClient.SaveRecordingChunkAsync(recordingChunk, completionToken);
 
-            await recordingUploader.UploadPartAsync(_staging, cancellationToken);
-            await PublishChunkCompletedMessage(cancellationToken);
+            await recordingUploader.UploadPartAsync(_staging, completionToken);
+            await PublishChunkCompletedMessage(completionToken);
         }           
 
-        await recordingUploader.FinalizeAsync(cancellationToken);
+        await recordingUploader.FinalizeAsync(completionToken);
 
-        await publisher.PublishAsync(MessageQueueNames.RecordingCompletedQueue,
+        await publisher.PublishFanoutAsync(MessageExchangeNames.RecordingCompletedExchange,
             new RecordingCompletedMessage
             {
                 RecordingId = recordingId.Value,
                 CompletedAt = DateTime.UtcNow
-            }, cancellationToken);
+            }, completionToken);
 
         recordingSession?.Status = RecordingStatus.Completed;
         recordingSession?.StoppedAt = DateTime.UtcNow;
 
-        await grpcRecordingSessionClient.UpdateRecordingSessionAsync(recordingSession!, cancellationToken);
+        await grpcRecordingSessionClient.UpdateRecordingSessionAsync(recordingSession!, completionToken);
 
         //logger.LogInformation("Stopping recording for ID: {RecordingId}", recordingId);
         logger.LogInformation("Recording session stopped: {RecordingSession}",

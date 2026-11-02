@@ -41,7 +41,8 @@ public static class DependencyInjection
             RabbitMqPublisher.CreateAsync(
                 sp.GetRequiredService<IConfiguration>(),
                 sp.GetRequiredService<ILogger<RabbitMqPublisher>>(),
-                queueNames: [MessageQueueNames.RecordingCompletedQueue, MessageQueueNames.ChunkCompletedQueue]
+                queueNames: [MessageQueueNames.ChunkCompletedQueue],
+                exchangeNames: [MessageExchangeNames.RecordingCompletedExchange]
             ).GetAwaiter().GetResult());
         services.AddSingleton<IMessagePublisher>(sp => sp.GetRequiredService<RabbitMqPublisher>());
 

@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using System.Text.Json;
+using VoiceCaptureService.Domain;
 using VoiceCaptureService.Infrastructure.Recording.Interfaces;
 
 namespace VoiceCaptureService.Infrastructure.Recording.Services;
@@ -13,16 +14,21 @@ public class RabbitMqPublisher(
     public static async Task<RabbitMqPublisher> CreateAsync(
         IConfiguration config,
         ILogger<RabbitMqPublisher> logger,
-        IEnumerable<string> queueNames)
+        IEnumerable<string> queueNames,
+        IEnumerable<string> exchangeNames)
     {
         var host = config["RabbitMQ:Host"] ?? throw new InvalidOperationException("Configuration value 'RabbitMQ:Host' is missing.");
         var port = int.Parse(config["RabbitMQ:Port"] ?? "5672");
         var virtualHost = config["RabbitMQ:VirtualHost"];
         virtualHost = string.IsNullOrWhiteSpace(virtualHost) ? "/" : virtualHost;
         var queues = queueNames.ToArray();
+        var exchanges = exchangeNames.ToArray();
 
         if (queues.Length == 0)
             throw new ArgumentException("At least one queue name must be provided.", nameof(queueNames));
+
+        if (exchanges.Length == 0)
+            throw new ArgumentException("At least one exchange name must be provided.", nameof(exchangeNames));
 
         try
         {
@@ -53,11 +59,20 @@ public class RabbitMqPublisher(
                         exclusive: false,
                         autoDelete: false);
                 }
+
+                foreach (var exchangeName in exchanges)
+                {
+                    await setupChannel.ExchangeDeclareAsync(
+                        exchange: exchangeName,
+                        type: ExchangeType.Fanout,
+                        durable: true,
+                        autoDelete: false);
+                }
             }
 
             logger.LogInformation(
-                "Connected to RabbitMQ at {Host}:{Port}, queues [{Queues}] ready",
-                host, port, string.Join(", ", queues));
+                "Connected to RabbitMQ at {Host}:{Port}, queues [{Queues}] and exchanges [{Exchanges}] ready",
+                host, port, string.Join(", ", queues), string.Join(", ", exchanges));
 
             return new RabbitMqPublisher(connection, logger);
         }
@@ -102,6 +117,38 @@ public class RabbitMqPublisher(
             logger.LogError(ex,
                 "Failed to publish {MessageType} to queue '{Queue}'",
                 messageType, queueName);
+            throw;
+        }
+    }
+
+    public async Task PublishFanoutAsync<T>(string exchangeName, T message, CancellationToken ct)
+    {
+        var messageType = typeof(T).Name;
+
+        try
+        {
+            using var channel = await connection.CreateChannelAsync(cancellationToken: ct);
+
+            var body = JsonSerializer.SerializeToUtf8Bytes(message);
+            var props = new BasicProperties { Persistent = true };
+
+            await channel.BasicPublishAsync(
+                exchange: exchangeName,
+                routingKey: string.Empty, // ignored by fanout
+                mandatory: false,
+                basicProperties: props,
+                body: body,
+                cancellationToken: ct);
+
+            logger.LogInformation(
+                "Published {MessageType} to fanout exchange '{Exchange}' successfully. Payload: {@Message}",
+                messageType, exchangeName, message);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex,
+                "Failed to publish {MessageType} to fanout exchange '{Exchange}'",
+                messageType, exchangeName);
             throw;
         }
     }

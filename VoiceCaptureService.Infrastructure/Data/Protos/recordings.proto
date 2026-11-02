@@ -14,7 +14,9 @@ service RecordingService {
   rpc UpdateStoragePath (UpdateStoragePathRequest) returns (UpdateStoragePathResponse);
   rpc UpdateWavPath (UpdateWavPathRequest) returns (UpdateWavPathResponse);
   rpc UpdateTranscriptPath (UpdateTranscriptPathRequest) returns (UpdateTranscriptPathResponse);
+  rpc UpdateDiarizationPath (UpdateDiarizationPathRequest) returns (UpdateDiarizationPathResponse);
   rpc GetRecordingMetadata (GetRecordingMetadataRequest) returns (GetRecordingMetadataResponse);
+  rpc GetTranscriptPath(GetTranscriptPathRequest) returns (GetTranscriptPathResponse);
 }
 
 message RecordingSessionRequest {
@@ -40,6 +42,14 @@ message GetRecordingMetadataRequest {
 
 message GetRecordingMetadataResponse {
   RecordingMetadataDto metadata = 1;
+}
+
+message GetTranscriptPathRequest{
+	string recording_id = 1;
+}
+
+message GetTranscriptPathResponse{
+	string transcript_path = 1;
 }
 
 message UpdateRecordingSessionRequest {
@@ -87,6 +97,15 @@ message UpdateTranscriptPathResponse {
   bool is_success = 1;
 }
 
+message UpdateDiarizationPathRequest {
+  string recording_id = 1;
+  string diarization_path = 2;
+}
+
+message UpdateDiarizationPathResponse {
+  bool is_success = 1;
+}
+
 message RecordingIdDto {
   string recording_id = 1;
 }
@@ -114,5 +133,6 @@ message RecordingSessionDto {
   string storage_path = 5;
   string wav_path = 6;
   string transcript_path = 7;
-  RecordingMetadataDto metadata = 8;
+  string diarization_path = 8;
+  RecordingMetadataDto metadata = 9;
 }
