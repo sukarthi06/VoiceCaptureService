@@ -3,6 +3,7 @@ using Microsoft.IO;
 using VoiceCaptureService.Api;
 using VoiceCaptureService.Api.Endpoints;
 using VoiceCaptureService.Api.Handlers;
+using VoiceCaptureService.Api.Security;
 using VoiceCaptureService.Application.Recording.Interfaces;
 using VoiceCaptureService.Application.Recording.Services;
 using VoiceCaptureService.Infrastructure;
@@ -11,6 +12,7 @@ using VoiceCaptureService.Infrastructure.Recording.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.AddGatewayKeyVault();
 builder.AddServiceDefaults();
 
 // Add services to the container.
@@ -54,6 +56,7 @@ if (!builder.Environment.IsEnvironment("Local"))
 var app = builder.Build();
 
 app.UseExceptionHandler();
+app.UseMiddleware<GatewaySecretMiddleware>();
 
 // Enable WebSockets
 app.UseWebSockets(new WebSocketOptions
