@@ -32,7 +32,9 @@ public sealed class GatewaySecretMiddleware(
 
         if (!IsMatch(provided, gatewayAuth.Secret) && !IsMatch(provided, gatewayAuth.NextSecret))
         {
-            logger.LogWarning("Rejected request to {Path}: missing or invalid gateway secret.", path);
+            logger.LogWarning(
+                "Rejected request to {Path} from {RemoteIp}, host {Host}: missing or invalid gateway secret.",
+                path, context.Connection.RemoteIpAddress, context.Request.Host);
             await Results.Problem(statusCode: StatusCodes.Status401Unauthorized, title: "Unauthorized")
                 .ExecuteAsync(context);
             return;
