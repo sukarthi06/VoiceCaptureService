@@ -1,20 +1,28 @@
-﻿using System.Buffers;
+﻿using Microsoft.Extensions.Options;
+using System.Buffers;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
+using VoiceCaptureService.Api.Configuration;
 using VoiceCaptureService.Application.Recording.Interfaces;
 using VoiceCaptureService.Domain.Recording.ValueObjects;
 
 namespace VoiceCaptureService.Api.Handlers;
 
-public class RecordingHandler(IRecordingOrchestrator recordingOrchestrator, ILogger<RecordingHandler> logger)
+public class RecordingHandler(
+    IRecordingOrchestrator recordingOrchestrator,
+    IOptions<RecordingLimitOptions> limitOptions,
+    ILogger<RecordingHandler> logger)
 {
     private const int BufferSize = 1024 * 8; // 8 KB buffer size
+    private static readonly TimeSpan CloseHandshakeTimeout = TimeSpan.FromSeconds(5);
+
     public async Task HandleRecordingAsync(WebSocket webSocket,
         CancellationToken cancellationToken)
     {        
         var receivedBuffer = ArrayPool<byte>.Shared.Rent(BufferSize);
         var offset = 0;
+        var maxDuration = TimeSpan.FromMinutes(limitOptions.Value.MaxDurationMinutes);
         var recordingId = RecordingId.Of(Guid.NewGuid()); // Initialize with a default value
         ValueWebSocketReceiveResult result;
         try
@@ -84,6 +92,13 @@ public class RecordingHandler(IRecordingOrchestrator recordingOrchestrator, ILog
                         logger.LogWarning("Received unexpected message type: {MessageType} for recording ID: {RecordingId}",
                             result.MessageType, recordingId);
                         break;
+                }
+
+                if (webSocket.State == WebSocketState.Open
+                        && recordingOrchestrator.RecordedDuration >= maxDuration)
+                {
+                    await CloseForDurationLimitAsync(webSocket, recordingId, cancellationToken);
+                    return;
                 }
             }
             
@@ -162,6 +177,33 @@ public class RecordingHandler(IRecordingOrchestrator recordingOrchestrator, ILog
         catch (Exception ex) {            
             logger.LogError(ex, "Error processing text message.");
             throw;
+        }
+    }
+
+    private async Task CloseForDurationLimitAsync(
+        WebSocket webSocket,
+        RecordingId recordingId,
+        CancellationToken cancellationToken)
+    {
+        logger.LogWarning(
+            "Maximum recording duration of {Minutes} minutes reached for recording ID: {RecordingId}. Closing connection.",
+            limitOptions.Value.MaxDurationMinutes, recordingId);
+
+        await recordingOrchestrator.StopRecordingAsync(recordingId, cancellationToken);
+
+        using var closeTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        closeTimeout.CancelAfter(CloseHandshakeTimeout);
+
+        try
+        {
+            await webSocket.CloseAsync(
+                WebSocketCloseStatus.PolicyViolation,
+                "Maximum recording duration reached.",
+                closeTimeout.Token);
+        }
+        catch (Exception ex) when (ex is OperationCanceledException or WebSocketException)
+        {
+            webSocket.Abort();
         }
     }
 }

@@ -26,8 +26,12 @@ public class RecordingOrchestrator(
     private string _chunkKey = string.Empty;
     private int _chunkCount = 0;
     private ChunkId? _chunkId;
+    private double _recordedSeconds;
+    private long _bytesPerSecond;
 
     private List<RecordingChunk> _chunks = [];
+
+    public TimeSpan RecordedDuration => TimeSpan.FromSeconds(_recordedSeconds);
 
     public async Task<RecordingId> StartRecordingAsync(CancellationToken cancellationToken)
     {       
@@ -48,7 +52,8 @@ public class RecordingOrchestrator(
         await grpcRecordingSessionClient.SaveRecordingSessionAsync(recordingSession, cancellationToken);
 
         return recordingSession.RecordingId;
-    }
+    }    
+
     public async Task AppendAudioChunkAsync(
         RecordingId recordingId, 
         ReadOnlyMemory<byte> pcmData,
@@ -58,6 +63,9 @@ public class RecordingOrchestrator(
         //    recordingId, pcmData.Length);
         // Appends to the same buffer every call — no overwrite, no reset
         await _staging.WriteAsync(pcmData, cancellationToken);
+
+        if (_bytesPerSecond > 0)
+            _recordedSeconds += (double)pcmData.Length / _bytesPerSecond;
     }
 
     public async Task StageChunkAsync(CancellationToken cancellationToken)
@@ -126,6 +134,8 @@ public class RecordingOrchestrator(
 
         //logger.LogInformation("Updated metadata for recording ID: {RecordingId}, Metadata: {Metadata}",
         //    recordingId, JsonSerializer.Serialize(metadata));
+
+        _bytesPerSecond = (long)metadata.SampleRate * (metadata.BitsPerSample / 8) * metadata.ChannelCount;
     }
     // Called when DI scope ends (i.e. WebSocket connection closes)
     public async ValueTask DisposeAsync()

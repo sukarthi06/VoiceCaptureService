@@ -5,6 +5,7 @@ namespace VoiceCaptureService.Application.Recording.Interfaces;
 
 public interface IRecordingOrchestrator
 {
+    TimeSpan RecordedDuration { get; }
     Task<RecordingId> StartRecordingAsync(CancellationToken cancellationToken);
     Task AppendAudioChunkAsync(RecordingId recordingId, ReadOnlyMemory<byte> pcmData, CancellationToken cancellationToken);
     Task StageChunkAsync(CancellationToken cancellationToken);

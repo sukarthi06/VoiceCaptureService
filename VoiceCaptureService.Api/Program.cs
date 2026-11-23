@@ -1,6 +1,7 @@
 using Azure.Storage.Blobs;
 using Microsoft.IO;
 using VoiceCaptureService.Api;
+using VoiceCaptureService.Api.Configuration;
 using VoiceCaptureService.Api.Endpoints;
 using VoiceCaptureService.Api.Handlers;
 using VoiceCaptureService.Api.Security;
@@ -67,6 +68,11 @@ builder.Services.AddProblemDetails();
 
 builder.Services.AddSingleton<BlobServiceClient>(_ =>
     new BlobServiceClient(builder.Configuration["Azure:StorageConnectionString"]));
+
+builder.Services.AddOptions<RecordingLimitOptions>()
+    .Bind(builder.Configuration.GetSection(RecordingLimitOptions.SectionName))
+    .Validate(o => o.MaxDurationMinutes > 0, "Recording:MaxDurationMinutes must be greater than 0.")
+    .ValidateOnStart();
 
 builder.Services.AddScoped<RecordingHandler>();
 builder.Services.AddScoped<IRecordingOrchestrator, RecordingOrchestrator>();
